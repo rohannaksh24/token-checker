@@ -64,6 +64,71 @@ html_template = """
             font-weight: 300;
         }
         
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            background: rgba(0, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 10px;
+        }
+        
+        .mode-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            color: #888;
+        }
+        
+        .mode-btn.active {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            color: #000;
+        }
+        
+        .mode-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .mode-section {
+            display: none;
+        }
+        
+        .mode-section.active {
+            display: block;
+        }
+        
+        .single-token-section {
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px dashed #00ffff;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .token-input {
+            width: 100%;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            color: white;
+            font-family: monospace;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .token-input::placeholder {
+            color: #888;
+        }
+        
         .upload-section {
             background: rgba(0, 255, 255, 0.1);
             border: 2px dashed #00ffff;
@@ -99,6 +164,12 @@ html_template = """
         .submit-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(255, 0, 255, 0.4);
+        }
+        
+        .submit-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
         }
         
         .stats {
@@ -294,6 +365,7 @@ html_template = """
             text-align: center;
             padding: 30px;
             color: #00ffff;
+            display: none;
         }
         
         .spinner {
@@ -322,7 +394,120 @@ html_template = """
         .glow {
             text-shadow: 0 0 10px #00ffff;
         }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-valid {
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+            border: 1px solid #00ff00;
+        }
+        
+        .btn-invalid {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff0000;
+            border: 1px solid #ff0000;
+        }
+        
+        .btn-all {
+            background: rgba(0, 255, 255, 0.2);
+            color: #00ffff;
+            border: 1px solid #00ffff;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
     </style>
+    <script>
+        function switchMode(mode) {
+            // Update buttons
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update sections
+            document.querySelectorAll('.mode-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(mode + '-mode').classList.add('active');
+            
+            // Update form action
+            document.getElementById('main-form').action = '/' + (mode === 'single' ? '?mode=single' : '?mode=multi');
+        }
+        
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.querySelector('.submit-btn').disabled = true;
+            document.querySelector('.submit-btn').innerHTML = '🔍 SCANNING TOKENS...';
+        }
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('✅ Copied to clipboard!');
+            }).catch(function(err) {
+                alert('❌ Copy failed: ' + err);
+            });
+        }
+        
+        function copyValidTokens() {
+            const validTokens = [];
+            document.querySelectorAll('.token-valid .token-preview').forEach(el => {
+                validTokens.push(el.textContent);
+            });
+            copyToClipboard(validTokens.join('\n'));
+        }
+        
+        function copyInvalidTokens() {
+            const invalidTokens = [];
+            document.querySelectorAll('.token-invalid .token-preview').forEach(el => {
+                invalidTokens.push(el.textContent);
+            });
+            copyToClipboard(invalidTokens.join('\n'));
+        }
+        
+        function copyAllTokens() {
+            const allTokens = [];
+            document.querySelectorAll('.token-preview').forEach(el => {
+                allTokens.push(el.textContent);
+            });
+            copyToClipboard(allTokens.join('\n'));
+        }
+        
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            const fileName = document.getElementById('fileName');
+            const submitBtn = document.querySelector('.submit-btn');
+            
+            if (file) {
+                if (file.name.endsWith('.txt')) {
+                    fileName.textContent = `📁 Selected: ${file.name}`;
+                    fileName.style.color = '#00ff00';
+                    submitBtn.disabled = false;
+                } else {
+                    fileName.textContent = '❌ Please select a .txt file only!';
+                    fileName.style.color = '#ff0000';
+                    submitBtn.disabled = true;
+                }
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="container">
@@ -331,14 +516,55 @@ html_template = """
             <p class="subtitle">PREMIUM FACEBOOK TOKEN VALIDATOR WITH PROFILE ANALYSIS</p>
         </div>
         
-        <form method="post" enctype="multipart/form-data">
-            <div class="upload-section">
-                <h3 style="color: #00ffff; margin-bottom: 15px;">📁 UPLOAD TOKENS FILE</h3>
-                <input class="file-input" type="file" name="tokenFile" accept=".txt" required>
-                <p style="color: #888; font-size: 0.9rem;">Upload .txt file with one token per line</p>
+        <!-- Mode Selector -->
+        <div class="mode-selector">
+            <button class="mode-btn active" onclick="switchMode('single')">🔍 SINGLE TOKEN</button>
+            <button class="mode-btn" onclick="switchMode('multi')">📁 MULTI TOKENS</button>
+        </div>
+        
+        <form method="post" enctype="multipart/form-data" id="main-form" onsubmit="showLoading()">
+            <!-- Single Token Mode -->
+            <div class="mode-section active" id="single-mode">
+                <div class="single-token-section">
+                    <h3 style="color: #00ffff; margin-bottom: 15px;">🔍 CHECK SINGLE TOKEN</h3>
+                    <textarea 
+                        class="token-input" 
+                        name="singleToken" 
+                        placeholder="Paste your Facebook token here...&#10;Example: EAABwzLixnjYBO...&#10;&#10;Or paste multiple tokens (one per line) for quick check"
+                        rows="6"
+                    >{{ single_token if single_token else '' }}</textarea>
+                    <p style="color: #888; font-size: 0.9rem; text-align: center;">
+                        Paste single token or multiple tokens (one per line)
+                    </p>
+                </div>
             </div>
-            <button class="submit-btn" type="submit">🚀 START VALIDATION</button>
+            
+            <!-- Multi Token Mode -->
+            <div class="mode-section" id="multi-mode">
+                <div class="upload-section">
+                    <h3 style="color: #00ffff; margin-bottom: 15px;">📁 UPLOAD TOKENS FILE</h3>
+                    <input class="file-input" type="file" name="tokenFile" accept=".txt" onchange="handleFileSelect(event)">
+                    <div id="fileName" style="color: #888; font-size: 0.9rem; margin-top: 10px;">
+                        No file selected
+                    </div>
+                    <p style="color: #888; font-size: 0.9rem;">Upload .txt file with one token per line</p>
+                </div>
+            </div>
+            
+            <button class="submit-btn" type="submit">
+                🚀 START VALIDATION
+            </button>
         </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; font-size: 1.1rem;">
+                🔍 Scanning Tokens & Fetching Information...
+            </p>
+            <p style="color: #888; margin-top: 5px;">
+                This may take a few moments...
+            </p>
+        </div>
         
         {% if results %}
         <div class="stats">
@@ -360,6 +586,21 @@ html_template = """
             </div>
         </div>
         
+        <!-- Action Buttons -->
+        {% if results.total > 1 %}
+        <div class="action-buttons">
+            <button class="action-btn btn-valid" onclick="copyValidTokens()">
+                📋 Copy Valid Tokens
+            </button>
+            <button class="action-btn btn-invalid" onclick="copyInvalidTokens()">
+                📋 Copy Invalid Tokens
+            </button>
+            <button class="action-btn btn-all" onclick="copyAllTokens()">
+                📋 Copy All Tokens
+            </button>
+        </div>
+        {% endif %}
+        
         <div class="token-results">
             {% for token_data in results.tokens %}
             <div class="token-card {% if token_data.valid %}token-valid{% else %}token-invalid{% endif %}">
@@ -367,7 +608,7 @@ html_template = """
                     <div class="token-status {% if token_data.valid %}status-valid{% else %}status-invalid{% endif %}">
                         {% if token_data.valid %}✅ VALID TOKEN{% else %}❌ INVALID TOKEN{% endif %}
                     </div>
-                    <div style="color: #888; font-family: monospace;">{{ token_data.token[:60] }}...</div>
+                    <div class="token-preview" style="color: #888; font-family: monospace;">{{ token_data.token[:60] }}...</div>
                 </div>
                 
                 {% if token_data.valid %}
@@ -586,31 +827,49 @@ def process_multiple_tokens(tokens_list):
 @app.route("/", methods=["GET", "POST"])
 def index():
     results = None
+    single_token = ""
+    mode = request.args.get('mode', 'single')
     
     if request.method == "POST":
-        if 'tokenFile' not in request.files:
-            return "No file uploaded", 400
-            
-        file = request.files['tokenFile']
-        if file.filename == '':
-            return "No file selected", 400
-            
-        if file and file.filename.endswith('.txt'):
-            try:
-                # Read tokens from file
-                tokens_content = file.stream.read().decode('utf-8')
-                tokens_list = [token.strip() for token in tokens_content.split('\n') if token.strip()]
+        mode = request.form.get('mode', 'single')
+        
+        if mode == 'single':
+            # Single token mode
+            single_token = request.form.get('singleToken', '').strip()
+            if single_token:
+                tokens_list = [token.strip() for token in single_token.split('\n') if token.strip()]
+                if tokens_list:
+                    results = process_multiple_tokens(tokens_list)
+            else:
+                return "No token provided", 400
                 
-                if not tokens_list:
-                    return "No tokens found in file", 400
+        else:
+            # Multi token mode
+            if 'tokenFile' not in request.files:
+                return "No file uploaded", 400
                 
-                # Process tokens
-                results = process_multiple_tokens(tokens_list)
+            file = request.files['tokenFile']
+            if file.filename == '':
+                return "No file selected", 400
                 
-            except Exception as e:
-                return f"Error processing file: {str(e)}", 500
+            if file and file.filename.endswith('.txt'):
+                try:
+                    # Read tokens from file
+                    tokens_content = file.stream.read().decode('utf-8')
+                    tokens_list = [token.strip() for token in tokens_content.split('\n') if token.strip()]
+                    
+                    if not tokens_list:
+                        return "No tokens found in file", 400
+                    
+                    # Process tokens
+                    results = process_multiple_tokens(tokens_list)
+                    
+                except Exception as e:
+                    return f"Error processing file: {str(e)}", 500
+            else:
+                return "Invalid file type. Please upload .txt file", 400
     
-    return render_template_string(html_template, results=results)
+    return render_template_string(html_template, results=results, single_token=single_token, mode=mode)
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
